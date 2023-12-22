@@ -5,6 +5,8 @@ import (
 	"bufio"
 	"bytes"
 	"io"
+
+	"github.com/auxten/postgresql-parser/pkg/sql/parser"
 )
 
 // StartBufSize is the default starting size of the buffer used to scan and parse multi-statement migrations
@@ -43,4 +45,25 @@ func Parse(reader io.Reader, delimiter []byte, maxMigrationSize int, h Handler) 
 		}
 	}
 	return scanner.Err()
+}
+
+// PGParse parses the given multi-statement migration
+func PGParse(reader io.Reader, _ []byte, _ int, h Handler) error {
+	data, err := io.ReadAll(reader)
+	if err != nil {
+		return err
+	}
+
+	stmts, err := parser.Parse(string(data))
+	if err != nil {
+		return err
+	}
+
+	for _, stmt := range stmts {
+		if !h([]byte(stmt.SQL)) {
+			break
+		}
+	}
+
+	return nil
 }
